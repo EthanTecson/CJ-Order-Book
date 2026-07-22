@@ -19,10 +19,8 @@
 #include <tuple>
 #include <format>
 
-// ! How do enum classes work?
 enum class OrderType
 {
-// ! What exactly do these things mean? 
     GoodTillCancel,
     FillAndKill
 };
@@ -48,7 +46,6 @@ using LevelInfos = std::vector<LevelInfo>;
 class OrderbookLevelInfos
 {
 public:
-    // ! What is this ':' syntax at the end of a function?
     OrderbookLevelInfos(const LevelInfos& bids, const LevelInfos& asks)
         : bids_ { bids }
         , asks_ { asks }
@@ -98,9 +95,95 @@ private:
     Quantity remainingQuantity_;
 };
 
-// ! WHAT is shared_ptr???
 using OrderPointer = std::shared_ptr<Order>;
 using OrderPointers = std::list<OrderPointer>;
+
+class OrderModify
+{
+public:
+    OrderModify(OrderId orderId, Side side, Price price, Quantity quantity)
+        : orderId_ { orderId }
+        , price_ { price }
+        , side_ { side }
+        , quantity_ { quantity }
+    { }
+
+    OrderId GetOrderId() const { return orderId_; }
+    Price GetPrice() const { return price_; }
+    Side GetSide() const { return side_; }
+    Quantity GetQuantity() const { return quantity_; }
+
+    OrderPointer ToOrderPointer(OrderType type) const
+    {
+        return std::make_shared<Order>(type, GetOrderId(), GetSide(), GetPrice(), GetQuantity());
+    }
+
+private:
+    OrderId orderId_;
+    Price price_;
+    Side side_;
+    Quantity quantity_;
+};
+
+struct TradeInfo
+{
+    OrderId orderId_;
+    Price price_;
+    Quantity quantity_;
+};
+
+class Trade
+{
+public:
+    Trade(const TradeInfo& bidTrade, const TradeInfo& askTrade)
+        : bidTrade_ { bidTrade }
+        , askTrade_ { askTrade }
+    {}
+
+    const TradeInfo& GetBidTrade() const { return bidTrade_; }
+    const TradeInfo& GetAskTrade() const { return askTrade_; }
+
+private:
+    TradeInfo bidTrade_;
+    TradeInfo askTrade_;
+};
+
+using Trades = std::vector<Trade>;
+
+class Orderbook
+{
+private:
+
+    struct OrderEntry
+    {
+        OrderPointer order_ { nullptr };
+        OrderPointers::iterator location_;
+    };
+    
+    std::map<Price, OrderPointers, std::greater<Price>> bids_;
+    std::map<Price, OrderPointers, std::less<Price>> asks_;
+    std::unordered_map<OrderId, OrderEntry> orders_;
+
+    bool CanMatch(Side side, Price price) const
+    {
+        if (side == Side::Buy)
+        {
+            if (asks_.empty())
+                return false;
+            
+            const auto& [bestAsk, _] = *asks_.begin();
+            return price >= bestAsk;
+        }
+        else
+        {
+            if (bids_.empty())
+                return false;
+            
+            const auto& [bestBid, _] = *bids_.begin();
+            return price <= bestBid;
+        }
+    }
+};
 
 int main()
 {
