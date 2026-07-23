@@ -3,7 +3,22 @@
 
 bool Orderbook::CanMatch(Side side, Price price) const
 {
-    return false; // stub
+    if (side == Side::Buy)
+    {
+        if (asks_.empty())
+            return false;
+        
+        auto& [ask, _] = *asks_.begin();
+        return (price >= ask);
+    }
+    else
+    {
+        if (bids_.empty())
+            return false;
+        
+        auto& [bid, _] = *bids_.begin();
+        return (price <= bid);
+    }
 }
 
 Trades Orderbook::MatchOrders()
